@@ -45,23 +45,23 @@ end
 local windowSize, showUserInfoValue
 if isMobile() then
     -- === สำหรับมือถือ ===
-    windowSize = UDim2.fromOffset(420, 350) -- ปรับขนาดให้เล็กลงพอดีจอมือถือ
-    showUserInfoValue = false -- ปิดรูปโปรไฟล์/ชื่อในมือถือเพื่อประหยัดพื้นที่ไม่ให้บังชื่อฟังก์ชัน
+    windowSize = UDim2.fromOffset(420, 350)
+    showUserInfoValue = false
     print("Running on Mobile Mode")
 else
-    -- === สำหรับคอมพิวเตอร์ (ค่าเดิมของคุณ) ===
-    windowSize = UDim2.fromOffset(868, 650) -- ขนาดใหญ่เต็มตา
-    showUserInfoValue = true -- เปิดโชว์ข้อมูลผู้ใช้ปกติ
+    -- === สำหรับคอมพิวเตอร์ ===
+    windowSize = UDim2.fromOffset(868, 650)
+    showUserInfoValue = true
     print("Running on PC Mode")
 end
 
 -- โหลด MacLib
 local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
 
--- สร้าง Window โดยใช้ค่าที่แยกตามอุปกรณ์
+-- สร้าง Window สำหรับ Poke Hub
 local Window = MacLib:Window({
-    Title = "Kuy Hub",
-    Subtitle = isMobile() and "Mobile V1" or "PC V1", -- เปลี่ยน Subtitle บอกโหมดด้วยก็ได้ครับ
+    Title = "Poke Hub",
+    Subtitle = isMobile() and "Pokemon Mobile Edition" or "Pokemon PC Edition",
     Size = windowSize,
     DragStyle = 2,
     DisabledWindowControls = {},
@@ -79,8 +79,8 @@ local Global_Setting = Window:GlobalSetting({
 })
 
 Window:Notify({
-    Title = "Kuy Hub",
-    Description = isMobile() and "Mobile UI Loaded!" or "PC UI Loaded!",
+    Title = "Poke Hub",
+    Description = isMobile() and "Pokemon Mobile UI Loaded!" or "Pokemon PC UI Loaded!",
     Lifetime = 5
 })
 
@@ -110,11 +110,11 @@ local function SetAutoClick(value)
     task.spawn(function()
         while getgenv().ClickEnabled and getgenv().ClickSession == mySession do
             local aimPos = getgenv().AttackOverride or (mouse and mouse.Hit and mouse.Hit.Position)
-if aimPos then
-    local args = {
-        "attack",
-        aimPos
-    }
+            if aimPos then
+                local args = {
+                    "attack",
+                    aimPos
+                }
 
                 local success, err = pcall(function()
                     game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Cast"):FireServer(unpack(args))
@@ -151,7 +151,7 @@ FarmLeftSection:Toggle({
     Callback = function(value)
         print("Auto Farm:", value)
 
-        SetAutoClick(value) -- เปิด/ปิด Auto Click ตาม Auto Farm
+        SetAutoClick(value)
 
         getgenv().Enabled = value
         getgenv().FarmSession = (getgenv().FarmSession or 0) + 1
@@ -174,7 +174,7 @@ FarmLeftSection:Toggle({
     end,
 }, "AutoFarmToggle")
 
-FarmLeftSection:Divider() -- เส้นขีดคั่น
+FarmLeftSection:Divider()
 FarmLeftSection:Header({ Text = "Unstuck" })
 
 FarmLeftSection:Button({
@@ -183,7 +183,6 @@ FarmLeftSection:Button({
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            -- หยุด Auto Farm ชั่วคราว 3 วินาที ไม่งั้นมันจะดึงกลับไปจุดฟาร์ม
             getgenv().FarmPauseUntil = os.clock() + 3
 
             hrp.CFrame = CFrame.new(
@@ -242,7 +241,6 @@ FarmRightSection:Toggle({
     end,
 }, "FastTrainToggle")
 
--- ดัก Report ที่เกมส่งเอง เพื่อรู้ว่าเวฟเริ่ม/จบ (ติดตั้งครั้งเดียว)
 getgenv().StageWaveAt = getgenv().StageWaveAt or 0
 getgenv().StageClearAt = getgenv().StageClearAt or 0
 
@@ -269,35 +267,6 @@ else
     hookOK = getgenv().StageHookInstalled == true
 end
 
-local AutoStageToggle
--- ดัก Report ที่เกมส่งเอง (ติดตั้งครั้งเดียว) ใช้เป็นตัวสำรองตรวจเวฟหมด
-getgenv().StageWaveAt = getgenv().StageWaveAt or 0
-getgenv().StageClearAt = getgenv().StageClearAt or 0
-
-local hookOK = false
-if not getgenv().StageHookInstalled and hookmetamethod and getnamecallmethod and newcclosure then
-    hookOK = pcall(function()
-        local old
-        old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-            if typeof(self) == "Instance" and self.Name == "Report" and getnamecallmethod() == "FireServer" then
-                local data = ...
-                if type(data) == "table" then
-                    if data.doing == "Wave" then
-                        getgenv().StageWaveAt = os.clock()
-                    elseif data.doing == "Stages" then
-                        getgenv().StageClearAt = os.clock()
-                    end
-                end
-            end
-            return old(self, ...)
-        end))
-    end)
-    getgenv().StageHookInstalled = hookOK
-else
-    hookOK = getgenv().StageHookInstalled == true
-end
-
--- หามอนรอบจุดที่กำหนด (โมเดลที่มี Humanoid และไม่ใช่ผู้เล่น)
 local function getMonsters(center, radius)
     local params = OverlapParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
@@ -329,7 +298,6 @@ getgenv().SilentAim = getgenv().SilentAim or {
     Radius = 150,
 }
 
--- หาเป้าหมายที่ใกล้ที่สุด (มอน และ/หรือ ผู้เล่น)
 local function getSilentTarget()
     local char = player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -362,7 +330,6 @@ local function getSilentTarget()
     return best
 end
 
--- Auto Skill แบบเรียกจากที่อื่นได้ (Combat และ Auto Stage ใช้ร่วมกัน)
 local function SetAutoSkill(value)
     getgenv().SkillEnabled = value
     getgenv().SkillSession = (getgenv().SkillSession or 0) + 1
@@ -422,7 +389,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
 
         local mySession = getgenv().StageSession
 
-        -- ตั้งค่า
         local StartStage = 1
         local Height = getgenv().KuySettings.StageHeight
         local Radius = 45
@@ -466,10 +432,10 @@ AutoStageToggle = FarmLeftSection:Toggle({
         end
 
         local function notify(text)
-            Window:Notify({ Title = "Kuy Hub", Description = text, Lifetime = 5 })
+            Window:Notify({ Title = "Poke Hub", Description = text, Lifetime = 5 })
         end
 
-                local function claimPad(stage, waitRespawn)
+        local function claimPad(stage, waitRespawn)
             local pad = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Pad")
 
             local function fire()
@@ -480,7 +446,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
             end
 
             if waitRespawn then
-                -- ตาย: ส่งทันทีหลายครั้ง แล้วรอเกิดใหม่
                 for _ = 1, 3 do
                     fire()
                     task.wait(0.4)
@@ -493,7 +458,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
                 until (hum and hum.Health > 0) or os.clock() - t0 > 10
             else
-                -- จบด่าน: ลงมายืนที่พื้นกลางด่านก่อน
                 local char = player.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 local cf = Stages[stage]
@@ -556,7 +520,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
                     local hrp = char and char:FindFirstChild("HumanoidRootPart")
                     local myHum = char and char:FindFirstChildOfClass("Humanoid")
 
-                    -- เช็กเลือด
                     if myHum and myHum.MaxHealth > 0 then
                         local ratio = myHum.Health / myHum.MaxHealth
                         if not inSafe and ratio <= LowHP then
@@ -568,7 +531,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
                         end
                     end
 
-                    -- เลือกตำแหน่ง: สลับไปมาถ้าเลือดต่ำ (หรือ HopAlways) ไม่งั้นลอยนิ่ง
                     if HopAlways or inSafe then
                         if os.clock() - lastHop >= HopInterval then
                             lastHop = os.clock()
@@ -585,7 +547,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
                         hrp.AssemblyLinearVelocity = Vector3.zero
                     end
 
-                    -- เล็งมอน
                     local monsters = getMonsters(cf.Position, Radius)
                     if #monsters > 0 then
                         seenMonster = true
@@ -615,7 +576,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
                         end
                     end
 
-                    -- สำรอง: Report บอกว่าเวฟหมด
                     if hookOK and getgenv().StageClearAt > getgenv().StageWaveAt
                         and getgenv().StageWaveAt > startedAt then
                         task.wait(0.1)
@@ -658,7 +618,6 @@ local AutoBossToggle = FarmRightSection:Toggle({
 
         local mySession = getgenv().BossSession
 
-        -- ตั้งค่า
         local BossPos = Vector3.new(-3001.05419921875, 2.962808132171631, 299.50390625)
         local Height = getgenv().KuySettings.BossHeight
 
@@ -674,7 +633,6 @@ local AutoBossToggle = FarmRightSection:Toggle({
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
 
                 if hum and hum.Health <= 0 then
-                    -- ตายแล้ว: เลือกกลับล็อบบี้ (ส่งซ้ำทุก 1 วินาทีจนกว่าจะเกิดใหม่)
                     if os.clock() - lastHome >= 1 then
                         lastHome = os.clock()
                         pcall(function()
@@ -715,10 +673,9 @@ CombatLeftSection:Toggle({
         if not value then return end
         local mySession = getgenv().AuraSession
 
-        -- ตั้งค่า
-        local Radius = getgenv().KuySettings.AuraRadius       -- รัศมีหามอนรอบตัวเรา (studs)
-        local MaxTargets = 5    -- ยิงสูงสุดกี่ตัวต่อรอบ
-        local Delay = 0.1       -- หน่วงต่อรอบ (วินาที)
+        local Radius = getgenv().KuySettings.AuraRadius
+        local MaxTargets = 5
+        local Delay = 0.1
 
         local function active()
             return getgenv().AuraEnabled and getgenv().AuraSession == mySession
@@ -810,7 +767,6 @@ StatsLeftSection:Toggle({
     Callback = function(value)
         print("Auto Rebirth:", value)
 
-        -- เปิด/ปิดตามค่า toggle และเปลี่ยน session เพื่อฆ่าลูปเก่า
         getgenv().RebirthEnabled = value
         getgenv().RebirthSession = (getgenv().RebirthSession or 0) + 1
         if not value then return end
@@ -878,7 +834,7 @@ MiscLeftSection:Toggle({
         if not value then return end
         local mySession = getgenv().PlaytimeSession
 
-        local MaxReward = 3 -- จำนวนรางวัลสูงสุด แก้ให้ตรงกับเกม
+        local MaxReward = 3
 
         local function active()
             return getgenv().PlaytimeEnabled and getgenv().PlaytimeSession == mySession
@@ -937,7 +893,7 @@ MiscRightSection:Button({
             end
 
             Window:Notify({
-                Title = "Kuy Hub",
+                Title = "Poke Hub",
                 Description = "Redeem finished: " .. success .. " ok, " .. failed .. " failed",
                 Lifetime = 6
             })
