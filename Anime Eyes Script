@@ -1,0 +1,1050 @@
+getgenv().KuySettings = getgenv().KuySettings or {
+    StageHeight = 25,
+    BossHeight = 20,
+    ClickDelay = 0.1,
+    AuraRadius = 40,
+}
+local player = game:GetService("Players").LocalPlayer
+
+local function getRebirths()
+    local ls = player:FindFirstChild("leaderstats")
+    local stat = ls and ls:FindFirstChild("Rebirths")
+    if stat then return stat.Value end
+    return player:GetAttribute("Rebirths") or 0
+end
+
+local FarmSpots = {
+    { Rebirth = 56, CFrame = CFrame.new(-59.1500015, 0.0500000007, 124.849998) },
+    { Rebirth = 44, CFrame = CFrame.new(-120.849998, 0.0500000007, 91.1500015) },
+    { Rebirth = 36, CFrame = CFrame.new(-92.8499985, 0.0500000007, 91.1500015) },
+    { Rebirth = 28, CFrame = CFrame.new(-148.850006, 0.0500000007, 63.1500015) },
+    { Rebirth = 20, CFrame = CFrame.new(-120.849998, 0.0500000007, 68.8499985) },
+    { Rebirth = 12, CFrame = CFrame.new(-59.1500015, 0.0500000007, 68.8499985) },
+    { Rebirth = 6,  CFrame = CFrame.new(-148.850006, 0.0500000007, 40.8499985) },
+    { Rebirth = 2,  CFrame = CFrame.new(-90, 0.818749964, 38) },
+    { Rebirth = 0,  CFrame = CFrame.new(-62, 11.25, 38) },
+}
+
+local function getFarmCFrame()
+    local rebirths = getRebirths()
+    for _, spot in ipairs(FarmSpots) do
+        if rebirths >= spot.Rebirth then
+            return spot.CFrame
+        end
+    end
+end
+
+local UserInputService = game:GetService("UserInputService")
+
+-- ฟังก์ชันตรวจสอบว่าเป็นมือถือหรือแท็บเล็ตหรือไม่
+local function isMobile()
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+-- กำหนดขนาดและค่าต่างๆ แยกตามอุปกรณ์
+local windowSize, showUserInfoValue
+if isMobile() then
+    -- === สำหรับมือถือ ===
+    windowSize = UDim2.fromOffset(420, 350) -- ปรับขนาดให้เล็กลงพอดีจอมือถือ
+    showUserInfoValue = false -- ปิดรูปโปรไฟล์/ชื่อในมือถือเพื่อประหยัดพื้นที่ไม่ให้บังชื่อฟังก์ชัน
+    print("Running on Mobile Mode")
+else
+    -- === สำหรับคอมพิวเตอร์ (ค่าเดิมของคุณ) ===
+    windowSize = UDim2.fromOffset(868, 650) -- ขนาดใหญ่เต็มตา
+    showUserInfoValue = true -- เปิดโชว์ข้อมูลผู้ใช้ปกติ
+    print("Running on PC Mode")
+end
+
+-- โหลด MacLib
+local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
+
+-- สร้าง Window โดยใช้ค่าที่แยกตามอุปกรณ์
+local Window = MacLib:Window({
+    Title = "Kuy Hub",
+    Subtitle = isMobile() and "Mobile V1" or "PC V1", -- เปลี่ยน Subtitle บอกโหมดด้วยก็ได้ครับ
+    Size = windowSize,
+    DragStyle = 2,
+    DisabledWindowControls = {},
+    ShowUserInfo = showUserInfoValue,
+    Keybind = Enum.KeyCode.RightControl,
+    AcrylicBlur = false,
+})
+
+local Global_Setting = Window:GlobalSetting({
+    Name = "Script Loaded",
+    Default = false,
+    Callback = function(State)
+        print("Loaded Succesfully " .. (State and "Enabled" or "Disabled"))
+    end,
+})
+
+Window:Notify({
+    Title = "Kuy Hub",
+    Description = isMobile() and "Mobile UI Loaded!" or "PC UI Loaded!",
+    Lifetime = 5
+})
+
+-- สร้าง TabGroup
+local MainTabGroup = Window:TabGroup()
+
+-- ==========================================
+-- 1. TAB: Main
+-- ==========================================
+local FarmTab = MainTabGroup:Tab({
+    Name = "Farming",
+    Image = "rbxassetid://6031094667"
+})
+
+local FarmLeftSection = FarmTab:Section({ Side = "Left" })
+local FarmRightSection = FarmTab:Section({ Side = "Right" })
+
+local function SetAutoClick(value)
+    getgenv().ClickEnabled = value
+    getgenv().ClickSession = (getgenv().ClickSession or 0) + 1
+    if not value then return end
+    local mySession = getgenv().ClickSession
+
+    local mouse = player:GetMouse()
+
+    -- ลูปที่ 1: โจมตีตามตำแหน่งเมาส์
+    task.spawn(function()
+        while getgenv().ClickEnabled and getgenv().ClickSession == mySession do
+            local aimPos = getgenv().AttackOverride or (mouse and mouse.Hit and mouse.Hit.Position)
+if aimPos then
+    local args = {
+        "attack",
+        aimPos
+    }
+
+                local success, err = pcall(function()
+                    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Cast"):FireServer(unpack(args))
+                end)
+
+                if not success then
+                    warn("Cast Remote Error: ", err)
+                end
+            end
+
+            task.wait(getgenv().KuySettings.ClickDelay)
+        end
+    end)
+
+    -- ลูปที่ 2: Train
+    task.spawn(function()
+        while getgenv().ClickEnabled and getgenv().ClickSession == mySession do
+            local success, err = pcall(function()
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Train"):FireServer()
+            end)
+
+            if not success then
+                warn("Train Remote Error: ", err)
+            end
+
+            task.wait(getgenv().KuySettings.ClickDelay)
+        end
+    end)
+end
+
+FarmLeftSection:Toggle({
+    Name = "Auto Farm",
+    Default = false,
+    Callback = function(value)
+        print("Auto Farm:", value)
+
+        SetAutoClick(value) -- เปิด/ปิด Auto Click ตาม Auto Farm
+
+        getgenv().Enabled = value
+        getgenv().FarmSession = (getgenv().FarmSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().FarmSession
+
+        task.spawn(function()
+            while getgenv().Enabled and getgenv().FarmSession == mySession do
+                local targetCF = getFarmCFrame()
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if targetCF and hrp and (hrp.Position - targetCF.Position).Magnitude > 10 then
+                    hrp.CFrame = targetCF
+                end
+
+                task.wait(0.3)
+            end
+        end)
+    end,
+}, "AutoFarmToggle")
+
+FarmLeftSection:Divider() -- เส้นขีดคั่น
+FarmLeftSection:Header({ Text = "Unstuck" })
+
+FarmLeftSection:Button({
+    Name = "Unstuck",
+    Callback = function()
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            -- หยุด Auto Farm ชั่วคราว 3 วินาที ไม่งั้นมันจะดึงกลับไปจุดฟาร์ม
+            getgenv().FarmPauseUntil = os.clock() + 3
+
+            hrp.CFrame = CFrame.new(
+                -0.224196225, 3.38280845, 44.8924446,
+                0.99184227, 4.033949e-08, -0.127471268,
+                -2.94539664e-08, 1, 8.72808528e-08,
+                0.127471268, -8.2814303e-08, 0.99184227
+            )
+        end
+    end,
+})
+
+local AutoClickToggle = FarmRightSection:Toggle({
+    Name = "Auto Cast",
+    Default = false,
+    Callback = function(value)
+        print("Auto Cast:", value)
+        SetAutoClick(value)
+    end,
+}, "AutoCastToggle")
+
+FarmRightSection:Toggle({
+    Name = "Fast Train",
+    Default = false,
+    Callback = function(value)
+        print("Fast Train:", value)
+
+        getgenv().FastTrainEnabled = value
+        getgenv().FastTrainSession = (getgenv().FastTrainSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().FastTrainSession
+
+        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+
+        local function active()
+            return getgenv().FastTrainEnabled and getgenv().FastTrainSession == mySession
+        end
+
+        task.spawn(function()
+            while active() do
+                local burst = getgenv().KuySettings.TrainBurst or 3
+                for _ = 1, burst do
+                    if not active() then break end
+                    local ok, err = pcall(function()
+                        remotes:WaitForChild("Train"):FireServer()
+                    end)
+                    if not ok then
+                        warn("Fast Train Error: ", err)
+                        break
+                    end
+                end
+
+                task.wait(getgenv().KuySettings.TrainDelay or 0.05)
+            end
+        end)
+    end,
+}, "FastTrainToggle")
+
+-- ดัก Report ที่เกมส่งเอง เพื่อรู้ว่าเวฟเริ่ม/จบ (ติดตั้งครั้งเดียว)
+getgenv().StageWaveAt = getgenv().StageWaveAt or 0
+getgenv().StageClearAt = getgenv().StageClearAt or 0
+
+local hookOK = false
+if not getgenv().StageHookInstalled and hookmetamethod and getnamecallmethod and newcclosure then
+    hookOK = pcall(function()
+        local old
+        old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            if typeof(self) == "Instance" and self.Name == "Report" and getnamecallmethod() == "FireServer" then
+                local data = ...
+                if type(data) == "table" then
+                    if data.doing == "Wave" then
+                        getgenv().StageWaveAt = os.clock()
+                    elseif data.doing == "Stages" then
+                        getgenv().StageClearAt = os.clock()
+                    end
+                end
+            end
+            return old(self, ...)
+        end))
+    end)
+    getgenv().StageHookInstalled = hookOK
+else
+    hookOK = getgenv().StageHookInstalled == true
+end
+
+local AutoStageToggle
+-- ดัก Report ที่เกมส่งเอง (ติดตั้งครั้งเดียว) ใช้เป็นตัวสำรองตรวจเวฟหมด
+getgenv().StageWaveAt = getgenv().StageWaveAt or 0
+getgenv().StageClearAt = getgenv().StageClearAt or 0
+
+local hookOK = false
+if not getgenv().StageHookInstalled and hookmetamethod and getnamecallmethod and newcclosure then
+    hookOK = pcall(function()
+        local old
+        old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            if typeof(self) == "Instance" and self.Name == "Report" and getnamecallmethod() == "FireServer" then
+                local data = ...
+                if type(data) == "table" then
+                    if data.doing == "Wave" then
+                        getgenv().StageWaveAt = os.clock()
+                    elseif data.doing == "Stages" then
+                        getgenv().StageClearAt = os.clock()
+                    end
+                end
+            end
+            return old(self, ...)
+        end))
+    end)
+    getgenv().StageHookInstalled = hookOK
+else
+    hookOK = getgenv().StageHookInstalled == true
+end
+
+-- หามอนรอบจุดที่กำหนด (โมเดลที่มี Humanoid และไม่ใช่ผู้เล่น)
+local function getMonsters(center, radius)
+    local params = OverlapParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { player.Character }
+
+    local list, seen = {}, {}
+    for _, part in ipairs(workspace:GetPartBoundsInRadius(center, radius, params)) do
+        local m = part
+        while m and m ~= workspace do
+            if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") then break end
+            m = m.Parent
+        end
+        if m and m ~= workspace and not seen[m] then
+            seen[m] = true
+            local hum = m:FindFirstChildOfClass("Humanoid")
+            if hum.Health > 0 and not game:GetService("Players"):GetPlayerFromCharacter(m) then
+                local root = m:FindFirstChild("HumanoidRootPart") or m.PrimaryPart or part
+                table.insert(list, root.Position)
+            end
+        end
+    end
+    return list
+end
+
+getgenv().SilentAim = getgenv().SilentAim or {
+    Enabled = false,
+    Monsters = true,
+    Players = false,
+    Radius = 150,
+}
+
+-- หาเป้าหมายที่ใกล้ที่สุด (มอน และ/หรือ ผู้เล่น)
+local function getSilentTarget()
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    local cfg = getgenv().SilentAim
+    local best, bestDist = nil, math.huge
+
+    if cfg.Monsters then
+        for _, pos in ipairs(getMonsters(hrp.Position, cfg.Radius)) do
+            local d = (pos - hrp.Position).Magnitude
+            if d < bestDist then best, bestDist = pos, d end
+        end
+    end
+
+    if cfg.Players then
+        for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+            local c = p ~= player and p.Character
+            local h = c and c:FindFirstChildOfClass("Humanoid")
+            local r = c and c:FindFirstChild("HumanoidRootPart")
+            if h and r and h.Health > 0 then
+                local d = (r.Position - hrp.Position).Magnitude
+                if d <= cfg.Radius and d < bestDist then
+                    best, bestDist = r.Position, d
+                end
+            end
+        end
+    end
+
+    return best
+end
+
+-- Auto Skill แบบเรียกจากที่อื่นได้ (Combat และ Auto Stage ใช้ร่วมกัน)
+local function SetAutoSkill(value)
+    getgenv().SkillEnabled = value
+    getgenv().SkillSession = (getgenv().SkillSession or 0) + 1
+    if not value then return end
+    local mySession = getgenv().SkillSession
+
+    local Skills = { "E", "R" }
+    local Delay = 0.5
+    local mouse = player:GetMouse()
+
+    local function active()
+        return getgenv().SkillEnabled and getgenv().SkillSession == mySession
+    end
+
+    task.spawn(function()
+        while active() do
+            local aimPos
+            if getgenv().SilentAim.Enabled then
+                aimPos = getSilentTarget()
+            end
+            aimPos = aimPos or getgenv().AttackOverride or (mouse and mouse.Hit and mouse.Hit.Position)
+
+            if aimPos then
+                for _, key in ipairs(Skills) do
+                    if not active() then break end
+                    local ok, err = pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Cast"):FireServer(key, aimPos)
+                    end)
+                    if not ok then warn("Skill " .. key .. " Error: ", err) end
+                    task.wait(0.1)
+                end
+            end
+
+            task.wait(Delay)
+        end
+    end)
+end
+
+local AutoStageToggle
+AutoStageToggle = FarmLeftSection:Toggle({
+    Name = "Auto Stage",
+    Default = false,
+    Callback = function(value)
+        print("Auto Stage:", value)
+
+        getgenv().StageEnabled = value
+        getgenv().StageSession = (getgenv().StageSession or 0) + 1
+
+        if not value then
+            getgenv().AttackOverride = nil
+            if not getgenv().Enabled and not getgenv().BossEnabled then
+                SetAutoClick(false)
+                SetAutoSkill(false)
+            end
+            return
+        end
+
+        local mySession = getgenv().StageSession
+
+        -- ตั้งค่า
+        local StartStage = 1
+        local Height = getgenv().KuySettings.StageHeight
+        local Radius = 45
+        local KillAura = true
+        local Timeout = 120
+        local LowHP = 0.4
+        local ResumeHP = 0.8
+        local SafeHeight = 40
+        local inSafe = false
+        local HopAlways = false
+        local HopInterval = 0.35
+        local HopSpots = {
+            Vector3.new(25, 0, 0),
+            Vector3.new(0, 0, 25),
+            Vector3.new(-25, 0, 0),
+            Vector3.new(0, 0, -25),
+        }
+        local hopIndex = 1
+        local lastHop = 0
+
+        local Stages = {
+            [1]  = CFrame.new(1.88, 2.98, -71.91),
+            [2]  = CFrame.new(0.54, 2.98, -162.58),
+            [3]  = CFrame.new(2.29, 2.98, -250.17),
+            [4]  = CFrame.new(0.98, 2.98, -344.73),
+            [5]  = CFrame.new(-0.35, 2.98, -430.96),
+            [6]  = CFrame.new(-0.06, 2.98, -519.15),
+            [7]  = CFrame.new(-0.14, 2.98, -610.05),
+            [8]  = CFrame.new(-0.22, 2.97, -700.95),
+            [9]  = CFrame.new(-0.14, 2.98, -790.98),
+            [10] = CFrame.new(3.17, 2.98, -884.83),
+            [11] = CFrame.new(0, 2.98, -975.2),
+            [12] = CFrame.new(0, 2.98, -1065.5),
+            [13] = CFrame.new(0, 2.98, -1155.9),
+            [14] = CFrame.new(0, 2.98, -1246.2),
+            [15] = CFrame.new(0, 2.98, -1336.5),
+        }
+
+        local function active()
+            return getgenv().StageEnabled and getgenv().StageSession == mySession
+        end
+
+        local function notify(text)
+            Window:Notify({ Title = "Kuy Hub", Description = text, Lifetime = 5 })
+        end
+
+                local function claimPad(stage, waitRespawn)
+            local pad = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Pad")
+
+            local function fire()
+                local ok, err = pcall(function()
+                    pad:FireServer(stage, "gold")
+                end)
+                if not ok then warn("Pad Error: ", err) end
+            end
+
+            if waitRespawn then
+                -- ตาย: ส่งทันทีหลายครั้ง แล้วรอเกิดใหม่
+                for _ = 1, 3 do
+                    fire()
+                    task.wait(0.4)
+                end
+
+                local t0 = os.clock()
+                repeat
+                    task.wait(0.3)
+                    local char = player.Character
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                until (hum and hum.Health > 0) or os.clock() - t0 > 10
+            else
+                -- จบด่าน: ลงมายืนที่พื้นกลางด่านก่อน
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local cf = Stages[stage]
+                if hrp and cf then
+                    hrp.CFrame = cf + Vector3.new(0, 3, 0)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                end
+                task.wait(1.5)
+            end
+
+            for _ = 1, 5 do
+                fire()
+                task.wait(0.5)
+            end
+
+            notify("Sent pad claim: stage " .. stage .. " (check your rewards)")
+        end
+
+        local function isDead()
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            return (not hum) or hum.Health <= 0
+        end
+
+        local function stopAll(reason)
+            notify(reason)
+            getgenv().StageEnabled = false
+            getgenv().StageSession = (getgenv().StageSession or 0) + 1
+            getgenv().AttackOverride = nil
+            if not getgenv().Enabled and not getgenv().BossEnabled then
+                SetAutoClick(false)
+                SetAutoSkill(false)
+            end
+            pcall(function() AutoStageToggle:UpdateState(false) end)
+        end
+
+        SetAutoClick(true)
+        SetAutoSkill(true)
+
+        task.spawn(function()
+            for stage = StartStage, 15 do
+                if not active() then return end
+
+                local cf = Stages[stage]
+                local hoverPos = cf.Position + Vector3.new(0, Height, 0)
+                local targetPos = hoverPos
+                local startedAt = os.clock()
+                local seenMonster = false
+                local emptySince = nil
+                notify("Stage " .. stage)
+
+                while active() do
+                    if isDead() then
+                        claimPad(stage, true)
+                        stopAll("You died at stage " .. stage .. " - Auto Stage stopped")
+                        return
+                    end
+
+                    local char = player.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    local myHum = char and char:FindFirstChildOfClass("Humanoid")
+
+                    -- เช็กเลือด
+                    if myHum and myHum.MaxHealth > 0 then
+                        local ratio = myHum.Health / myHum.MaxHealth
+                        if not inSafe and ratio <= LowHP then
+                            inSafe = true
+                            notify("Low HP - dodging")
+                        elseif inSafe and ratio >= ResumeHP then
+                            inSafe = false
+                            notify("HP recovered - back to fight")
+                        end
+                    end
+
+                    -- เลือกตำแหน่ง: สลับไปมาถ้าเลือดต่ำ (หรือ HopAlways) ไม่งั้นลอยนิ่ง
+                    if HopAlways or inSafe then
+                        if os.clock() - lastHop >= HopInterval then
+                            lastHop = os.clock()
+                            hopIndex = hopIndex % #HopSpots + 1
+                        end
+                        local h = inSafe and SafeHeight or Height
+                        targetPos = cf.Position + HopSpots[hopIndex] + Vector3.new(0, h, 0)
+                    else
+                        targetPos = hoverPos
+                    end
+
+                    if hrp then
+                        hrp.CFrame = CFrame.new(targetPos)
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                    end
+
+                    -- เล็งมอน
+                    local monsters = getMonsters(cf.Position, Radius)
+                    if #monsters > 0 then
+                        seenMonster = true
+                        emptySince = nil
+
+                        table.sort(monsters, function(a, b)
+                            return (a - targetPos).Magnitude < (b - targetPos).Magnitude
+                        end)
+                        getgenv().AttackOverride = monsters[1]
+
+                        if KillAura then
+                            for i = 2, math.min(#monsters, 5) do
+                                pcall(function()
+                                    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Cast"):FireServer("attack", monsters[i])
+                                end)
+                            end
+                        end
+                    else
+                        getgenv().AttackOverride = cf.Position
+                        if seenMonster then
+                            emptySince = emptySince or os.clock()
+                            if os.clock() - emptySince >= 0.3 then
+                                notify("Stage " .. stage .. " cleared")
+                                task.wait(0.1)
+                                break
+                            end
+                        end
+                    end
+
+                    -- สำรอง: Report บอกว่าเวฟหมด
+                    if hookOK and getgenv().StageClearAt > getgenv().StageWaveAt
+                        and getgenv().StageWaveAt > startedAt then
+                        task.wait(0.1)
+                        break
+                    end
+
+                    if os.clock() - startedAt >= Timeout then
+                        notify("Stage " .. stage .. " timeout - moving on")
+                        break
+                    end
+
+                    task.wait(0.1)
+                end
+            end
+
+            if active() then
+                claimPad(15, false)
+                stopAll("All 15 stages completed")
+            end
+        end)
+    end,
+}, "AutoStageToggle")
+
+local AutoBossToggle = FarmRightSection:Toggle({
+    Name = "Auto Boss",
+    Default = false,
+    Callback = function(value)
+        print("Auto Boss:", value)
+
+        getgenv().BossEnabled = value
+        getgenv().BossSession = (getgenv().BossSession or 0) + 1
+
+        if not value then
+            getgenv().AttackOverride = nil
+            if not getgenv().Enabled then
+                SetAutoClick(false)
+            end
+            return
+        end
+
+        local mySession = getgenv().BossSession
+
+        -- ตั้งค่า
+        local BossPos = Vector3.new(-3001.05419921875, 2.962808132171631, 299.50390625)
+        local Height = getgenv().KuySettings.BossHeight
+
+        getgenv().AttackOverride = BossPos + Vector3.new(0, 3, 0)
+        SetAutoClick(true)
+
+        task.spawn(function()
+            local lastHome = 0
+
+            while getgenv().BossEnabled and getgenv().BossSession == mySession do
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+                if hum and hum.Health <= 0 then
+                    -- ตายแล้ว: เลือกกลับล็อบบี้ (ส่งซ้ำทุก 1 วินาทีจนกว่าจะเกิดใหม่)
+                    if os.clock() - lastHome >= 1 then
+                        lastHome = os.clock()
+                        pcall(function()
+                            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Boss"):FireServer("home")
+                        end)
+                    end
+                    task.wait(0.3)
+                else
+                    if hrp and hum then
+                        hrp.CFrame = CFrame.new(BossPos + Vector3.new(0, Height, 0))
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                    end
+                    task.wait(0.1)
+                end
+            end
+        end)
+    end,
+}, "AutoBossToggle")
+
+-- ==========================================
+-- 2. TAB: COMBAT
+-- ==========================================
+local CombatTab = MainTabGroup:Tab({
+    Name = "Combat",
+    Image = "rbxassetid://6034294024"
+})
+
+local CombatLeftSection = CombatTab:Section({ Side = "Left" })
+
+CombatLeftSection:Toggle({
+    Name = "Kill Aura",
+    Default = false,
+    Callback = function(value)
+        print("Kill Aura:", value)
+
+        getgenv().AuraEnabled = value
+        getgenv().AuraSession = (getgenv().AuraSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().AuraSession
+
+        -- ตั้งค่า
+        local Radius = getgenv().KuySettings.AuraRadius       -- รัศมีหามอนรอบตัวเรา (studs)
+        local MaxTargets = 5    -- ยิงสูงสุดกี่ตัวต่อรอบ
+        local Delay = 0.1       -- หน่วงต่อรอบ (วินาที)
+
+        local function active()
+            return getgenv().AuraEnabled and getgenv().AuraSession == mySession
+        end
+
+        task.spawn(function()
+            while active() do
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if hrp then
+                    local monsters = getMonsters(hrp.Position, Radius)
+
+                    table.sort(monsters, function(a, b)
+                        return (a - hrp.Position).Magnitude < (b - hrp.Position).Magnitude
+                    end)
+
+                    for i = 1, math.min(#monsters, MaxTargets) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Cast"):FireServer("attack", monsters[i])
+                        end)
+                    end
+                end
+
+                task.wait(Delay)
+            end
+        end)
+    end,
+}, "KillAuraToggle")
+
+CombatLeftSection:Toggle({
+    Name = "Auto Skill",
+    Default = false,
+    Callback = function(value)
+        print("Auto Skill:", value)
+        SetAutoSkill(value)
+    end,
+}, "AutoSkillToggle")
+
+CombatLeftSection:Toggle({
+    Name = "Silent Aim",
+    Default = false,
+    Callback = function(value)
+        getgenv().SilentAim.Enabled = value
+    end,
+}, "SilentAimToggle")
+
+CombatLeftSection:Toggle({
+    Name = "Silent Aim: Target Monsters",
+    Default = true,
+    Callback = function(value)
+        getgenv().SilentAim.Monsters = value
+    end,
+}, "SilentAimMonstersToggle")
+
+CombatLeftSection:Toggle({
+    Name = "Silent Aim: Target Players",
+    Default = false,
+    Callback = function(value)
+        getgenv().SilentAim.Players = value
+    end,
+}, "SilentAimPlayersToggle")
+
+CombatLeftSection:Slider({
+    Name = "Silent Aim Range",
+    Default = 150,
+    Minimum = 30,
+    Maximum = 300,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().SilentAim.Radius = Value
+    end,
+}, "SilentAimRangeSlider")
+
+-- ==========================================
+-- 3. TAB: STATS & REBIRTH
+-- ==========================================
+local StatsTab = MainTabGroup:Tab({
+    Name = "Stats & Rebirth",
+    Image = "rbxassetid://6031265917"
+})
+
+local StatsLeftSection = StatsTab:Section({ Side = "Left" })
+
+StatsLeftSection:Toggle({
+    Name = "Auto Rebirth",
+    Default = false,
+    Callback = function(value)
+        print("Auto Rebirth:", value)
+
+        -- เปิด/ปิดตามค่า toggle และเปลี่ยน session เพื่อฆ่าลูปเก่า
+        getgenv().RebirthEnabled = value
+        getgenv().RebirthSession = (getgenv().RebirthSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().RebirthSession
+
+        task.spawn(function()
+            while getgenv().RebirthEnabled and getgenv().RebirthSession == mySession do
+                local success, err = pcall(function()
+                    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Rebirth"):InvokeServer()
+                end)
+
+                if not success then
+                    warn("Rebirth Remote Error: ", err)
+                end
+
+                task.wait(0.1)
+            end
+        end)
+    end,
+}, "AutoRebirthToggle")
+
+-- ==========================================
+-- 5. TAB: REWARDS
+-- ==========================================
+local MiscTab = MainTabGroup:Tab({
+    Name = "Rewards & Misc",
+    Image = "rbxassetid://6034509993"
+})
+
+local MiscLeftSection = MiscTab:Section({ Side = "Left" })
+local MiscRightSection = MiscTab:Section({ Side = "Right" })
+
+MiscLeftSection:Toggle({
+    Name = "Auto Claim Daily",
+    Default = false,
+    Callback = function(value)
+        print("Auto Claim Daily:", value)
+
+        getgenv().DailyEnabled = value
+        getgenv().DailySession = (getgenv().DailySession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().DailySession
+
+        task.spawn(function()
+            while getgenv().DailyEnabled and getgenv().DailySession == mySession do
+                local ok, result = pcall(function()
+                    return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("ClaimDaily"):InvokeServer()
+                end)
+                print("ClaimDaily ->", ok, result)
+
+                task.wait(60)
+            end
+        end)
+    end,
+}, "AutoClaimDailyToggle")
+
+MiscLeftSection:Toggle({
+    Name = "Auto Claim Playtime Reward",
+    Default = false,
+    Callback = function(value)
+        print("Auto Claim Playtime:", value)
+
+        getgenv().PlaytimeEnabled = value
+        getgenv().PlaytimeSession = (getgenv().PlaytimeSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().PlaytimeSession
+
+        local MaxReward = 3 -- จำนวนรางวัลสูงสุด แก้ให้ตรงกับเกม
+
+        local function active()
+            return getgenv().PlaytimeEnabled and getgenv().PlaytimeSession == mySession
+        end
+
+        task.spawn(function()
+            while active() do
+                for id = 1, MaxReward do
+                    if not active() then break end
+
+                    local ok, result = pcall(function()
+                        return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("ClaimReward"):InvokeServer(id)
+                    end)
+                    if not ok then
+                        warn("ClaimReward Error: ", result)
+                    end
+
+                    task.wait(0.5)
+                end
+
+                task.wait(30)
+            end
+        end)
+    end,
+}, "AutoPlaytimeToggle")
+
+MiscRightSection:Button({
+    Name = "Redeem All Codes",
+    Callback = function()
+        local Codes = {
+            "UPDATE2",
+            "KURUMA",
+            "1MILLIONVISITS",
+            "NEWWORLDS",
+            "UPDATE1",
+            "SHARINGAN",
+            "AWAKEN",
+        }
+
+        task.spawn(function()
+            local success, failed = 0, 0
+
+            for _, code in ipairs(Codes) do
+                local ok, result = pcall(function()
+                    return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RedeemCode"):InvokeServer(code)
+                end)
+                print("Redeem", code, "->", ok, result)
+
+                if ok and result then
+                    success += 1
+                else
+                    failed += 1
+                end
+
+                task.wait(1)
+            end
+
+            Window:Notify({
+                Title = "Kuy Hub",
+                Description = "Redeem finished: " .. success .. " ok, " .. failed .. " failed",
+                Lifetime = 6
+            })
+        end)
+    end,
+})
+
+-- Anti-AFK
+local VirtualUser = game:GetService("VirtualUser")
+
+MiscRightSection:Toggle({
+    Name = "Anti-AFK",
+    Default = false,
+    Callback = function(value)
+        print("Anti-AFK:", value)
+
+        if getgenv().AntiAfkConn then
+            getgenv().AntiAfkConn:Disconnect()
+            getgenv().AntiAfkConn = nil
+        end
+        if not value then return end
+
+        getgenv().AntiAfkConn = player.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end,
+}, "AntiAfkToggle")
+
+-- ==========================================
+-- 4. TAB: SETTINGS
+-- ==========================================
+local SettingsTab = MainTabGroup:Tab({
+    Name = "Settings",
+    Image = "rbxassetid://6023426915"
+})
+
+local SettingsLeftSection = SettingsTab:Section({ Side = "Left" })
+
+SettingsLeftSection:Slider({
+    Name = "Auto Stage Height",
+    Default = getgenv().KuySettings.StageHeight,
+    Minimum = 5,
+    Maximum = 80,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.StageHeight = Value
+    end,
+}, "StageHeightSlider")
+
+SettingsLeftSection:Slider({
+    Name = "Auto Boss Height",
+    Default = getgenv().KuySettings.BossHeight,
+    Minimum = 5,
+    Maximum = 80,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.BossHeight = Value
+    end,
+}, "BossHeightSlider")
+
+SettingsLeftSection:Slider({
+    Name = "Click Delay (x0.01s)",
+    Default = getgenv().KuySettings.ClickDelay * 100,
+    Minimum = 3,
+    Maximum = 50,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.ClickDelay = Value / 100
+    end,
+}, "ClickDelaySlider")
+
+SettingsLeftSection:Slider({
+    Name = "Kill Aura Radius",
+    Default = getgenv().KuySettings.AuraRadius,
+    Minimum = 10,
+    Maximum = 120,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.AuraRadius = Value
+    end,
+}, "AuraRadiusSlider")
+
+SettingsLeftSection:Slider({
+    Name = "Fast Train: hits per loop",
+    Default = getgenv().KuySettings.TrainBurst or 3,
+    Minimum = 1,
+    Maximum = 10,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.TrainBurst = Value
+    end,
+}, "TrainBurstSlider")
+
+SettingsLeftSection:Slider({
+    Name = "Fast Train Delay (x0.01s)",
+    Default = (getgenv().KuySettings.TrainDelay or 0.05) * 100,
+    Minimum = 1,
+    Maximum = 30,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.TrainDelay = Value / 100
+    end,
+}, "TrainDelaySlider")
