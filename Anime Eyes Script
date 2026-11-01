@@ -212,7 +212,223 @@ end
 -- ทำงานบน UI ของ Rayfield ได้ โค้ดส่วนอื่นด้านล่างไม่ได้ถูกแก้ไขเลย
 -- ==========================================================================
 local RAYFIELD_URL = "https://sirius.menu/rayfield" -- ถ้ามีลิงก์ Rayfield ของตัวเอง เปลี่ยนตรงนี้ได้
+local LOGO_IMAGE = "https://cdn.discordapp.com/attachments/1566269275768099007/1566408414563930142/a_vibrant_high_contrast_anime_game_style_banner.png?ex=6ae86f04&is=6ae71d84&hm=4a39080f226bb78debb2d2c8e29dfbf7006d085b9df7a7bd1db052db0240042e&" -- ใส่ asset id ของรูปโลโก้ (ใส่แค่ตัวเลขหรือ "rbxassetid://เลข" ก็ได้, เว้นว่าง = แสดงตัวอักษร PH)
 local Rayfield = loadstring(game:HttpGet(RAYFIELD_URL))()
+
+-- ==========================================================================
+-- ปุ่มโลโก้ลอย: กดเพื่อ เปิด/ปิด UI (ลากย้ายตำแหน่งได้ ใช้ได้ทั้ง PC และมือถือ)
+-- ==========================================================================
+local function findRayfieldGui()
+    local roots = {}
+    if gethui then table.insert(roots, gethui()) end
+    local okCore, coreGui = pcall(function() return game:GetService("CoreGui") end)
+    if okCore then table.insert(roots, coreGui) end
+
+    for _, root in ipairs(roots) do
+        local g = root:FindFirstChild("Rayfield")
+        if g then return g end
+    end
+    return nil
+end
+
+local function getUIVisible()
+    local ok, v = pcall(function() return Rayfield:IsVisible() end)
+    if ok and type(v) == "boolean" then return v end
+
+    -- เผื่อ Rayfield เวอร์ชันเก่าที่ไม่มี IsVisible
+    local g = findRayfieldGui()
+    return g ~= nil and g.Enabled
+end
+
+local function setUIVisible(visible)
+    local ok = pcall(function() Rayfield:SetVisibility(visible) end)
+    if ok then return end
+
+    -- เผื่อ Rayfield เวอร์ชันเก่าที่ไม่มี SetVisibility
+    local g = findRayfieldGui()
+    if g then g.Enabled = visible end
+end
+
+-- ซ่อนปุ่ม "Show Rayfield" ที่ Rayfield สร้างให้เองตอนปิด UI (ใช้ปุ่มโลโก้แทน)
+local function removeBuiltinShowButton()
+    local g = findRayfieldGui()
+    if not g then return end
+
+    local function hide(obj)
+        if obj.Name == "Prompt" and obj:IsA("GuiObject") then
+            obj.Visible = false
+            obj:GetPropertyChangedSignal("Visible"):Connect(function()
+                if obj.Visible then obj.Visible = false end
+            end)
+        end
+    end
+
+    for _, c in ipairs(g:GetChildren()) do hide(c) end
+    g.ChildAdded:Connect(hide)
+end
+
+local function createLogoToggle()
+    local UIS = game:GetService("UserInputService")
+    local TweenService = game:GetService("TweenService")
+
+    local parent
+    if gethui then
+        parent = gethui()
+    else
+        local ok, cg = pcall(function() return game:GetService("CoreGui") end)
+        parent = ok and cg or player:WaitForChild("PlayerGui")
+    end
+
+    -- กันปุ่มซ้อนเวลารันสคริปต์ซ้ำ
+    local old = parent:FindFirstChild("PokeHubLogoToggle")
+    if old then old:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "PokeHubLogoToggle"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 1000
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+    gui.Parent = parent
+
+    local SIZE = 72
+    local OPEN_COLOR = Color3.fromRGB(0, 170, 255)
+    local CLOSED_COLOR = Color3.fromRGB(85, 85, 85)
+
+    local btn = Instance.new("TextButton")
+    btn.Name = "Logo"
+    btn.Size = UDim2.fromOffset(SIZE, SIZE)
+    -- เริ่มต้นอยู่กึ่งกลางจอ ค่อนไปทางด้านบน (ลากย้ายได้ภายหลัง)
+    local viewport = workspace.CurrentCamera.ViewportSize
+    btn.Position = UDim2.fromOffset(
+        math.floor((viewport.X - SIZE) / 2),
+        math.floor(viewport.Y * 0.168)
+    )
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    btn.BackgroundTransparency = 0.05
+    btn.AutoButtonColor = false
+    btn.Text = ""
+    btn.Active = true
+    btn.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = btn
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 2
+    stroke.Color = OPEN_COLOR
+    stroke.Parent = btn
+
+    local logoImg = tostring(LOGO_IMAGE)
+    if tonumber(logoImg) then logoImg = "rbxassetid://" .. logoImg end
+
+    -- ถ้าเป็นลิงก์รูป (เช่นจาก Discord) ให้โหลดลงเครื่องแล้วแปลงเป็น asset ที่ Roblox แสดงได้
+    if logoImg:match("^https?://") then
+        local okDl, asset = pcall(function()
+            local data = game:HttpGet(logoImg)
+            writefile("PokeHubLogo.png", data)
+            return (getcustomasset or getsynasset)("PokeHubLogo.png")
+        end)
+        logoImg = okDl and asset or ""
+        if not okDl then warn("Logo download error: ", asset) end
+    end
+
+    if logoImg ~= "" then
+        local img = Instance.new("ImageLabel")
+        img.BackgroundTransparency = 1
+        img.Size = UDim2.fromScale(1, 1)
+        img.ScaleType = Enum.ScaleType.Crop
+        img.Image = logoImg
+
+        -- ตัดรูปให้กลมพอดีกับปุ่ม เต็มขนาดเท่ากัน
+        local imgCorner = Instance.new("UICorner")
+        imgCorner.CornerRadius = UDim.new(1, 0)
+        imgCorner.Parent = img
+        img.Parent = btn
+    else
+        local lbl = Instance.new("TextLabel")
+        lbl.BackgroundTransparency = 1
+        lbl.Size = UDim2.fromScale(1, 1)
+        lbl.Font = Enum.Font.GothamBold
+        lbl.Text = "PH"
+        lbl.TextSize = 18
+        lbl.TextColor3 = Color3.fromRGB(240, 240, 240)
+        lbl.Parent = btn
+    end
+
+    -- สีขอบ: ฟ้า = UI เปิดอยู่, เทา = UI ปิดอยู่
+    local lastState = nil
+    local function refresh()
+        local visible = getUIVisible()
+        if visible ~= lastState then
+            lastState = visible
+            TweenService:Create(stroke, TweenInfo.new(0.25), {
+                Color = visible and OPEN_COLOR or CLOSED_COLOR
+            }):Play()
+        end
+    end
+
+    local function toggle()
+        setUIVisible(not getUIVisible())
+        task.delay(0.15, refresh)
+    end
+
+    -- ลากเพื่อย้ายตำแหน่ง / กดเฉยๆ เพื่อ เปิด-ปิด
+    local activeInput, dragStart, startX, startY, moved
+
+    local function clampPos(x, y)
+        local screen = gui.AbsoluteSize
+        return math.clamp(x, 0, math.max(screen.X - SIZE, 0)),
+               math.clamp(y, 0, math.max(screen.Y - SIZE, 0))
+    end
+
+    btn.InputBegan:Connect(function(input)
+        if activeInput then return end
+        local t = input.UserInputType
+        if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
+            activeInput = input
+            moved = false
+            dragStart = input.Position
+            startX, startY = btn.Position.X.Offset, btn.Position.Y.Offset
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    activeInput = nil
+                end
+            end)
+        end
+    end)
+
+    -- สลับเปิด/ปิดเฉพาะตอนกด "บนปุ่มจริงๆ" และไม่ได้ลาก (กันเปิดปิดเองเวลาแตะหน้าจอ)
+    btn.Activated:Connect(function()
+        if not moved then toggle() end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if not activeInput then return end
+        local isMouseDrag = input.UserInputType == Enum.UserInputType.MouseMovement
+            and activeInput.UserInputType == Enum.UserInputType.MouseButton1
+
+        if isMouseDrag or input == activeInput then
+            local delta = input.Position - dragStart
+            if not moved and delta.Magnitude > 8 then moved = true end
+            if moved then
+                local x, y = clampPos(startX + delta.X, startY + delta.Y)
+                btn.Position = UDim2.fromOffset(x, y)
+            end
+        end
+    end)
+
+    -- ให้สีขอบตรงกับสถานะจริง แม้ปิดด้วยปุ่ม X ของ Rayfield หรือกดคีย์ลัด
+    task.spawn(function()
+        while gui.Parent do
+            refresh()
+            task.wait(0.3)
+        end
+    end)
+end
 
 local MacLib = {}
 
@@ -225,7 +441,12 @@ function MacLib:Window(cfg)
         LoadingSubtitle = cfg.Subtitle or "",
         ToggleUIKeybind = cfg.Keybind or Enum.KeyCode.K,
         ConfigurationSaving = { Enabled = false },
+        DisableRayfieldPrompts = true, -- ปิดแจ้งเตือน "Interface Hidden ... กด K" เพราะใช้ปุ่มโลโก้แทน
     })
+
+    local okLogo, errLogo = pcall(createLogoToggle)
+    if not okLogo then warn("Logo toggle error: ", errLogo) end
+    pcall(removeBuiltinShowButton)
 
     local WindowObj = {}
 
