@@ -27,7 +27,7 @@ local FarmSpots = {
     { Rebirth = 0,  CFrame = CFrame.new(-62, 11.25, 38) },
 }
 
--- จุดเกิดของแต่ละโลก (โลก 3-5 เป็นค่าที่เดาจากระยะห่าง 3000 ยังไม่ได้วัดจริง)
+-- จุดเกิดของแต่ละโลก (ห่างกันโลกละ 3000 studs ตามแกน X ยืนยันแล้ว)
 local Worlds = {
     [1] = { Name = "World 1", Spawn = Vector3.new(0,     0.2, 46), FarmSpots = FarmSpots, Stages = nil },
     [2] = { Name = "World 2", Spawn = Vector3.new(3000,  0.2, 46), FarmSpots = nil,       Stages = nil },
@@ -35,7 +35,8 @@ local Worlds = {
     [4] = { Name = "World 4", Spawn = Vector3.new(9000,  0.2, 46), FarmSpots = nil,       Stages = nil },
     [5] = { Name = "World 5", Spawn = Vector3.new(12000, 0.2, 46), FarmSpots = nil,       Stages = nil },
 }
--- สร้างจุดฟาร์ม/ด่านของโลก 2-5 จากโลก 1 โดยเลื่อนแกน X ทีละ 3000
+
+-- ด่านของโลก 1 (ใช้สร้างด่านโลก 2-5 โดยเลื่อนแกน X ทีละ 3000 - ค่าเดา)
 local Stages1 = {
     [1]  = CFrame.new(1.88, 2.98, -71.91),
     [2]  = CFrame.new(0.54, 2.98, -162.58),
@@ -71,6 +72,55 @@ for id = 2, 5 do
     Worlds[id].Stages = stages
 end
 
+-- จุดฟาร์มจริงของโลก 2-5 (วัดโดยผู้ใช้) เรียงจาก Rebirth มากไปน้อย
+Worlds[2].FarmSpots = {
+    { Rebirth = 121, CFrame = CFrame.new(2938.32, 3.23, 121.64) },
+    { Rebirth = 109, CFrame = CFrame.new(2884.85, 0.05, 96.85) },
+    { Rebirth = 97,  CFrame = CFrame.new(2911.26, 3.23, 93.86) },
+    { Rebirth = 85,  CFrame = CFrame.new(2856.16, 3.23, 66.47) },
+    { Rebirth = 77,  CFrame = CFrame.new(2883.72, 3.23, 66.22) },
+    { Rebirth = 72,  CFrame = CFrame.new(2939.05, 3.23, 66.77) },
+    { Rebirth = 69,  CFrame = CFrame.new(2854.74, 3.23, 37.67) },
+    { Rebirth = 66,  CFrame = CFrame.new(2909.29, 3.88, 38.55) },
+    { Rebirth = 64,  CFrame = CFrame.new(2937.43, 3.23, 38.31) },
+}
+
+Worlds[3].FarmSpots = {
+    { Rebirth = 208, CFrame = CFrame.new(5935.15, 0.05, 124.85) },
+    { Rebirth = 200, CFrame = CFrame.new(5879.15, 0.05, 96.85) },
+    { Rebirth = 193, CFrame = CFrame.new(5907.15, 0.05, 91.15) },
+    { Rebirth = 186, CFrame = CFrame.new(5856.85, 0.05, 68.85) },
+    { Rebirth = 179, CFrame = CFrame.new(5881.09, 3.23, 65.37) },
+    { Rebirth = 172, CFrame = CFrame.new(5939.15, 3.23, 66.41) },
+    { Rebirth = 164, CFrame = CFrame.new(5854.08, 3.23, 38.25) },
+    { Rebirth = 157, CFrame = CFrame.new(5909.88, 3.88, 38.27) },
+    { Rebirth = 150, CFrame = CFrame.new(5938.13, 3.23, 38.20) },
+}
+
+Worlds[4].FarmSpots = {
+    { Rebirth = 298, CFrame = CFrame.new(8940.85, 0.05, 119.15) },
+    { Rebirth = 290, CFrame = CFrame.new(8884.85, 0.05, 96.85) },
+    { Rebirth = 283, CFrame = CFrame.new(8912.85, 0.05, 96.85) },
+    { Rebirth = 276, CFrame = CFrame.new(8856.85, 0.05, 68.85) },
+    { Rebirth = 269, CFrame = CFrame.new(8879.15, 0.05, 63.15) },
+    { Rebirth = 262, CFrame = CFrame.new(8935.15, 0.05, 68.85) },
+    { Rebirth = 254, CFrame = CFrame.new(8856.85, 0.05, 35.15) },
+    { Rebirth = 247, CFrame = CFrame.new(8910.00, 0.82, 38.00) },
+    { Rebirth = 240, CFrame = CFrame.new(8940.85, 0.05, 35.15) },
+}
+
+Worlds[5].FarmSpots = {
+    { Rebirth = 358, CFrame = CFrame.new(11940.85, 0.05, 124.85) },
+    { Rebirth = 350, CFrame = CFrame.new(11884.85, 0.05, 96.85) },
+    { Rebirth = 343, CFrame = CFrame.new(11912.85, 0.05, 91.15) },
+    { Rebirth = 336, CFrame = CFrame.new(11856.85, 0.05, 68.85) },
+    { Rebirth = 329, CFrame = CFrame.new(11884.85, 0.05, 63.15) },
+    { Rebirth = 322, CFrame = CFrame.new(11940.85, 0.05, 68.85) },
+    { Rebirth = 314, CFrame = CFrame.new(11856.85, 0.05, 40.85) },
+    { Rebirth = 307, CFrame = CFrame.new(11910.00, 0.82, 38.00) },
+    { Rebirth = 300, CFrame = CFrame.new(11935.15, 0.05, 40.85) },
+}
+
 -- ตรวจว่าอยู่โลกไหน (ใกล้จุดเกิดไหนสุด และต้องอยู่ห่างไม่เกิน 1500 studs)
 local function getCurrentWorld()
     local char = player.Character
@@ -91,9 +141,9 @@ local function getFarmCFrame()
     local _, world = getCurrentWorld()
     local spots
     if world then
-        spots = world.FarmSpots   -- โลก 2-5 ที่ยังไม่มีข้อมูล = nil → ไม่ขยับ
+        spots = world.FarmSpots
     else
-        spots = FarmSpots         -- ตรวจโลกไม่เจอ ใช้ของโลก 1
+        spots = FarmSpots -- ตรวจโลกไม่เจอ ใช้ของโลก 1
     end
     if not spots then return nil end
 
@@ -105,6 +155,57 @@ local function getFarmCFrame()
     end
 end
 
+-- เลือกโลกและจุดฟาร์มที่ดีที่สุดตาม Rebirth ปัจจุบัน
+local function getBestFarm()
+    local rebirths = getRebirths()
+
+    for id = 5, 1, -1 do
+        local spots = Worlds[id] and Worlds[id].FarmSpots
+        if spots then
+            -- จุดแรกที่ Rebirth พอ (ตารางเรียงมากไปน้อยอยู่แล้ว)
+            for _, spot in ipairs(spots) do
+                if rebirths >= spot.Rebirth then
+                    return id, spot.CFrame
+                end
+            end
+        end
+    end
+
+    return nil, nil
+end
+
+-- วาร์ปไปจุดเกิดของโลก
+local function goToWorld(id)
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local w = Worlds[id]
+    if hrp and w then
+        hrp.CFrame = CFrame.new(w.Spawn)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+end
+
+local SelectedWorld = 1
+
+local UserInputService = game:GetService("UserInputService")
+
+-- ฟังก์ชันตรวจสอบว่าเป็นมือถือหรือแท็บเล็ตหรือไม่
+local function isMobile()
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+-- กำหนดขนาดและค่าต่างๆ แยกตามอุปกรณ์
+local windowSize, showUserInfoValue
+if isMobile() then
+    windowSize = UDim2.fromOffset(420, 350)
+    showUserInfoValue = false
+    print("Running on Mobile Mode")
+else
+    windowSize = UDim2.fromOffset(868, 650)
+    showUserInfoValue = true
+    print("Running on PC Mode")
+end
+
 -- โหลด MacLib
 local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
 
@@ -112,14 +213,15 @@ local viewport = workspace.CurrentCamera.ViewportSize
 local width  = math.clamp(viewport.X * 0.6, 420, 868)
 local height = math.clamp(viewport.Y * 0.75, 300, 650)
 
+
 -- สร้าง Window สำหรับ Poke Hub
 local Window = MacLib:Window({
     Title = "Poke Hub",
-    Subtitle = "V1",
-    Size = UDim2.fromOffset(868, 650),
+    Subtitle = isMobile() and "Pokemon Mobile Edition" or "Pokemon PC Edition",
+    Size = windowSize,
     DragStyle = 2,
     DisabledWindowControls = {},
-    ShowUserInfo = true,
+    ShowUserInfo = showUserInfoValue,
     Keybind = Enum.KeyCode.RightControl,
     AcrylicBlur = false,
 })
@@ -134,7 +236,7 @@ local Global_Setting = Window:GlobalSetting({
 
 Window:Notify({
     Title = "Poke Hub",
-    Description = "PokeHub UI Loaded!",
+    Description = isMobile() and "Pokemon Mobile UI Loaded!" or "Pokemon PC UI Loaded!",
     Lifetime = 5
 })
 
@@ -160,7 +262,7 @@ local function SetAutoClick(value)
 
     local mouse = player:GetMouse()
 
-    -- ลูปที่ 1: โจมตีตามตำแหน่งเมาส์
+    -- ลูปที่ 1: โจมตี
     task.spawn(function()
         while getgenv().ClickEnabled and getgenv().ClickSession == mySession do
             local aimPos = getgenv().AttackOverride or (mouse and mouse.Hit and mouse.Hit.Position)
@@ -213,30 +315,29 @@ FarmLeftSection:Toggle({
         local mySession = getgenv().FarmSession
 
         task.spawn(function()
-            local lastWorldMove = 0
+            local lastWorldId = nil
 
             while getgenv().Enabled and getgenv().FarmSession == mySession do
                 local char = player.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local alive = hrp and hum and hum.Health > 0
 
-                if alive then
-                    -- ย้ายไปโลกสูงสุดที่ปลดล็อก (ถ้าอยู่โลกต่ำกว่า)
-                    local curId = getCurrentWorld()
-                    local target = math.clamp(getgenv().KuySettings.MaxWorld or 1, 1, 5)
+                if hrp and hum and hum.Health > 0 then
+                    local worldId, targetCF = getBestFarm()
 
-                    if curId and curId < target and os.clock() - lastWorldMove > 5 then
-                        lastWorldMove = os.clock()
-                        Window:Notify({ Title = "Poke Hub", Description = "Moving to World " .. target, Lifetime = 4 })
-                        goToWorld(target)
-                        task.wait(1)
-                    else
-                        local targetCF = getFarmCFrame()
-                        if targetCF
-                            and os.clock() >= (getgenv().FarmPauseUntil or 0)
-                            and (hrp.Position - targetCF.Position).Magnitude > 10 then
+                    if targetCF and os.clock() >= (getgenv().FarmPauseUntil or 0) then
+                        if worldId ~= lastWorldId then
+                            lastWorldId = worldId
+                            Window:Notify({
+                                Title = "Poke Hub",
+                                Description = "Farming World " .. worldId .. " (Rebirth " .. getRebirths() .. ")",
+                                Lifetime = 4
+                            })
+                        end
+
+                        if (hrp.Position - targetCF.Position).Magnitude > 10 then
                             hrp.CFrame = targetCF
+                            hrp.AssemblyLinearVelocity = Vector3.zero
                         end
                     end
                 end
@@ -246,40 +347,6 @@ FarmLeftSection:Toggle({
         end)
     end,
 }, "AutoFarmToggle")
-
-FarmLeftSection:Divider()
-FarmLeftSection:Header({ Text = "Unstuck" })
-
-FarmLeftSection:Button({
-    Name = "Unstuck",
-    Callback = function()
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            getgenv().FarmPauseUntil = os.clock() + 3
-
-            hrp.CFrame = CFrame.new(
-                -0.224196225, 3.38280845, 44.8924446,
-                0.99184227, 4.033949e-08, -0.127471268,
-                -2.94539664e-08, 1, 8.72808528e-08,
-                0.127471268, -8.2814303e-08, 0.99184227
-            )
-        end
-    end,
-})
-
-local function goToWorld(id)
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local w = Worlds[id]
-    if hrp and w then
-        hrp.CFrame = CFrame.new(w.Spawn)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-    end
-end
-
-local SelectedWorld = 1
-
 
 FarmLeftSection:Toggle({
     Name = "Auto World (keep in target world)",
@@ -296,12 +363,13 @@ FarmLeftSection:Toggle({
             while getgenv().WorldEnabled and getgenv().WorldSession == mySession do
                 local curId = getCurrentWorld()
                 local char = player.Character
-                local alive = char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").Health > 0
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local alive = hum and hum.Health > 0
 
                 -- ไปเฉพาะตอนตรวจเจอว่าอยู่ผิดโลก และตัวละครยังไม่ตาย
                 if alive and curId and curId ~= SelectedWorld then
                     goToWorld(SelectedWorld)
-                    task.wait(5) -- รอโหลดโลกใหม่ก่อนเช็กอีกรอบ
+                    task.wait(5)
                 end
 
                 task.wait(2)
@@ -714,7 +782,6 @@ AutoStageToggle = FarmLeftSection:Toggle({
             end
 
             if active() then
-        
                 claimPad(15, false)
                 local cur = getCurrentWorld()
                 if cur and cur < 5 then
@@ -1185,66 +1252,3 @@ SettingsLeftSection:Slider({
         getgenv().KuySettings.MaxWorld = Value
     end,
 }, "MaxWorldSlider")
-
-- ===== Pokemon Theme (ย้อมสีหลังสร้าง UI) =====
-task.spawn(function()
-    task.wait(1)
-
-    local RED    = Color3.fromRGB(238, 21, 21)    -- แดงโปเกบอล
-    local YELLOW = Color3.fromRGB(255, 203, 5)    -- เหลืองพิคาชู
-    local DARK   = Color3.fromRGB(34, 20, 24)     -- พื้นหลังเข้มโทนแดง
-
-    -- หา ScreenGui ของ MacLib จากข้อความ "Poke Hub"
-    local roots = {}
-    pcall(function() table.insert(roots, gethui and gethui() or nil) end)
-    table.insert(roots, game:GetService("CoreGui"))
-    table.insert(roots, player:WaitForChild("PlayerGui"))
-
-    local gui
-    for _, root in ipairs(roots) do
-        for _, g in ipairs(root:GetChildren()) do
-            if g:IsA("ScreenGui") then
-                for _, d in ipairs(g:GetDescendants()) do
-                    if d:IsA("TextLabel") and d.Text == "Poke Hub" then
-                        gui = g
-                        break
-                    end
-                end
-            end
-            if gui then break end
-        end
-        if gui then break end
-    end
-
-    if not gui then
-        warn("Pokemon theme: MacLib GUI not found")
-        return
-    end
-
-    local function recolor(c)
-        local h, s, v = c:ToHSV()
-        if s > 0.35 and v > 0.4 then
-            return RED                          -- สีเน้น (ปุ่ม/ตัวเลือกที่เปิด) -> แดง
-        elseif v < 0.4 then
-            return c:Lerp(DARK, 0.6)            -- พื้นเข้ม -> เข้มโทนแดง
-        end
-        return c
-    end
-
-    for _, d in ipairs(gui:GetDescendants()) do
-        pcall(function()
-            if d:IsA("Frame") or d:IsA("TextButton") or d:IsA("ImageLabel") or d:IsA("ScrollingFrame") then
-                if d.BackgroundTransparency < 1 then
-                    d.BackgroundColor3 = recolor(d.BackgroundColor3)
-                end
-            end
-            if d:IsA("UIStroke") then
-                d.Color = d.Color:Lerp(YELLOW, 0.5)
-            end
-            if d:IsA("UIGradient") then
-                d.Color = ColorSequence.new(RED, DARK)
-            end
-        end)
-    end
-end)
-
