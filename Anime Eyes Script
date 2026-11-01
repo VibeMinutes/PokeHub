@@ -197,7 +197,7 @@ end
 -- กำหนดขนาดและค่าต่างๆ แยกตามอุปกรณ์
 local windowSize, showUserInfoValue
 if isMobile() then
-    windowSize = UDim2.fromOffset(700, 560)
+    windowSize = UDim2.fromOffset(600, 600)
     showUserInfoValue = false
     print("Running on Mobile Mode")
 else
@@ -206,8 +206,127 @@ else
     print("Running on PC Mode")
 end
 
--- โหลด MacLib
-local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
+-- ==========================================================================
+-- โหลด Rayfield (แทน MacLib)
+-- ส่วนนี้เป็นตัวแปลง (adapter) ที่ทำให้คำสั่ง MacLib เดิมทั้งหมดในสคริปต์
+-- ทำงานบน UI ของ Rayfield ได้ โค้ดส่วนอื่นด้านล่างไม่ได้ถูกแก้ไขเลย
+-- ==========================================================================
+local RAYFIELD_URL = "https://sirius.menu/rayfield" -- ถ้ามีลิงก์ Rayfield ของตัวเอง เปลี่ยนตรงนี้ได้
+local Rayfield = loadstring(game:HttpGet(RAYFIELD_URL))()
+
+local MacLib = {}
+
+function MacLib:Window(cfg)
+    cfg = cfg or {}
+
+    local RFWindow = Rayfield:CreateWindow({
+        Name = cfg.Title or "Poke Hub",
+        LoadingTitle = cfg.Title or "Poke Hub",
+        LoadingSubtitle = cfg.Subtitle or "",
+        ToggleUIKeybind = cfg.Keybind or Enum.KeyCode.K,
+        ConfigurationSaving = { Enabled = false },
+    })
+
+    local WindowObj = {}
+
+    -- Rayfield ไม่มีเมนู Global Setting จึงคืนค่าว่างไว้เฉยๆ
+    function WindowObj:GlobalSetting(s)
+        return {}
+    end
+
+    function WindowObj:Notify(n)
+        n = n or {}
+        Rayfield:Notify({
+            Title = n.Title or "Poke Hub",
+            Content = n.Description or n.Content or "",
+            Duration = n.Lifetime or 5,
+        })
+    end
+
+    function WindowObj:TabGroup()
+        local GroupObj = {}
+
+        function GroupObj:Tab(t)
+            t = t or {}
+            -- MacLib ส่ง "rbxassetid://123" แต่ Rayfield ต้องการเลข asset id
+            local img = t.Image and tonumber(tostring(t.Image):match("%d+")) or nil
+            local RFTab = RFWindow:CreateTab(t.Name or "Tab", img)
+
+            local TabObj = {}
+
+            -- Rayfield ไม่มีคอลัมน์ซ้าย/ขวา องค์ประกอบจะเรียงลงมาตามลำดับที่สร้าง
+            function TabObj:Section(s)
+                local SectionObj = {}
+
+                function SectionObj:Toggle(o, flag)
+                    o = o or {}
+                    local rf = RFTab:CreateToggle({
+                        Name = o.Name or "Toggle",
+                        CurrentValue = o.Default or false,
+                        Flag = flag,
+                        Callback = o.Callback or function() end,
+                    })
+
+                    local ToggleObj = {}
+                    function ToggleObj:UpdateState(v)
+                        rf:Set(v)
+                    end
+                    function ToggleObj:SetState(v)
+                        rf:Set(v)
+                    end
+                    return ToggleObj
+                end
+
+                function SectionObj:Slider(o, flag)
+                    o = o or {}
+                    local precision = o.Precision or 0
+                    local min = o.Minimum or 0
+                    local max = o.Maximum or 100
+
+                    local rf = RFTab:CreateSlider({
+                        Name = o.Name or "Slider",
+                        Range = { min, max },
+                        Increment = 1 / (10 ^ precision),
+                        Suffix = "",
+                        CurrentValue = o.Default or min,
+                        Flag = flag,
+                        Callback = o.Callback or function() end,
+                    })
+
+                    local SliderObj = {}
+                    function SliderObj:UpdateValue(v)
+                        rf:Set(v)
+                    end
+                    return SliderObj
+                end
+
+                function SectionObj:Button(o)
+                    o = o or {}
+                    RFTab:CreateButton({
+                        Name = o.Name or "Button",
+                        Callback = o.Callback or function() end,
+                    })
+                    return {}
+                end
+
+                return SectionObj
+            end
+
+            return TabObj
+        end
+
+        return GroupObj
+    end
+
+    return WindowObj
+end
+-- ==========================================================================
+-- จบส่วน adapter (ตั้งแต่บรรทัดนี้ลงไปเป็นสคริปต์เดิมของคุณทั้งหมด)
+-- ==========================================================================
+
+local viewport = workspace.CurrentCamera.ViewportSize
+local width  = math.clamp(viewport.X * 0.6, 420, 868)
+local height = math.clamp(viewport.Y * 0.75, 300, 650)
 
 
 -- สร้าง Window สำหรับ Poke Hub
