@@ -197,7 +197,7 @@ end
 -- กำหนดขนาดและค่าต่างๆ แยกตามอุปกรณ์
 local windowSize, showUserInfoValue
 if isMobile() then
-    windowSize = UDim2.fromOffset(868, 659)
+    windowSize = UDim2.fromOffset(773, 411)
     showUserInfoValue = false
     print("Running on Mobile Mode")
 else
