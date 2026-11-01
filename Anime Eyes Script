@@ -1186,3 +1186,65 @@ SettingsLeftSection:Slider({
     end,
 }, "MaxWorldSlider")
 
+- ===== Pokemon Theme (ย้อมสีหลังสร้าง UI) =====
+task.spawn(function()
+    task.wait(1)
+
+    local RED    = Color3.fromRGB(238, 21, 21)    -- แดงโปเกบอล
+    local YELLOW = Color3.fromRGB(255, 203, 5)    -- เหลืองพิคาชู
+    local DARK   = Color3.fromRGB(34, 20, 24)     -- พื้นหลังเข้มโทนแดง
+
+    -- หา ScreenGui ของ MacLib จากข้อความ "Poke Hub"
+    local roots = {}
+    pcall(function() table.insert(roots, gethui and gethui() or nil) end)
+    table.insert(roots, game:GetService("CoreGui"))
+    table.insert(roots, player:WaitForChild("PlayerGui"))
+
+    local gui
+    for _, root in ipairs(roots) do
+        for _, g in ipairs(root:GetChildren()) do
+            if g:IsA("ScreenGui") then
+                for _, d in ipairs(g:GetDescendants()) do
+                    if d:IsA("TextLabel") and d.Text == "Poke Hub" then
+                        gui = g
+                        break
+                    end
+                end
+            end
+            if gui then break end
+        end
+        if gui then break end
+    end
+
+    if not gui then
+        warn("Pokemon theme: MacLib GUI not found")
+        return
+    end
+
+    local function recolor(c)
+        local h, s, v = c:ToHSV()
+        if s > 0.35 and v > 0.4 then
+            return RED                          -- สีเน้น (ปุ่ม/ตัวเลือกที่เปิด) -> แดง
+        elseif v < 0.4 then
+            return c:Lerp(DARK, 0.6)            -- พื้นเข้ม -> เข้มโทนแดง
+        end
+        return c
+    end
+
+    for _, d in ipairs(gui:GetDescendants()) do
+        pcall(function()
+            if d:IsA("Frame") or d:IsA("TextButton") or d:IsA("ImageLabel") or d:IsA("ScrollingFrame") then
+                if d.BackgroundTransparency < 1 then
+                    d.BackgroundColor3 = recolor(d.BackgroundColor3)
+                end
+            end
+            if d:IsA("UIStroke") then
+                d.Color = d.Color:Lerp(YELLOW, 0.5)
+            end
+            if d:IsA("UIGradient") then
+                d.Color = ColorSequence.new(RED, DARK)
+            end
+        end)
+    end
+end)
+
