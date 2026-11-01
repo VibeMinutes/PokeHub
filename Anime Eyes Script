@@ -4,6 +4,8 @@ getgenv().KuySettings = getgenv().KuySettings or {
     ClickDelay = 0.1,
     AuraRadius = 40,
 }
+getgenv().KuySettings.MaxWorld = getgenv().KuySettings.MaxWorld or 1
+
 local player = game:GetService("Players").LocalPlayer
 
 local function getRebirths()
@@ -25,47 +27,99 @@ local FarmSpots = {
     { Rebirth = 0,  CFrame = CFrame.new(-62, 11.25, 38) },
 }
 
+-- จุดเกิดของแต่ละโลก (โลก 3-5 เป็นค่าที่เดาจากระยะห่าง 3000 ยังไม่ได้วัดจริง)
+local Worlds = {
+    [1] = { Name = "World 1", Spawn = Vector3.new(0,     0.2, 46), FarmSpots = FarmSpots, Stages = nil },
+    [2] = { Name = "World 2", Spawn = Vector3.new(3000,  0.2, 46), FarmSpots = nil,       Stages = nil },
+    [3] = { Name = "World 3", Spawn = Vector3.new(6000,  0.2, 46), FarmSpots = nil,       Stages = nil },
+    [4] = { Name = "World 4", Spawn = Vector3.new(9000,  0.2, 46), FarmSpots = nil,       Stages = nil },
+    [5] = { Name = "World 5", Spawn = Vector3.new(12000, 0.2, 46), FarmSpots = nil,       Stages = nil },
+}
+-- สร้างจุดฟาร์ม/ด่านของโลก 2-5 จากโลก 1 โดยเลื่อนแกน X ทีละ 3000
+local Stages1 = {
+    [1]  = CFrame.new(1.88, 2.98, -71.91),
+    [2]  = CFrame.new(0.54, 2.98, -162.58),
+    [3]  = CFrame.new(2.29, 2.98, -250.17),
+    [4]  = CFrame.new(0.98, 2.98, -344.73),
+    [5]  = CFrame.new(-0.35, 2.98, -430.96),
+    [6]  = CFrame.new(-0.06, 2.98, -519.15),
+    [7]  = CFrame.new(-0.14, 2.98, -610.05),
+    [8]  = CFrame.new(-0.22, 2.97, -700.95),
+    [9]  = CFrame.new(-0.14, 2.98, -790.98),
+    [10] = CFrame.new(3.17, 2.98, -884.83),
+    [11] = CFrame.new(0, 2.98, -975.2),
+    [12] = CFrame.new(0, 2.98, -1065.5),
+    [13] = CFrame.new(0, 2.98, -1155.9),
+    [14] = CFrame.new(0, 2.98, -1246.2),
+    [15] = CFrame.new(0, 2.98, -1336.5),
+}
+
+for id = 2, 5 do
+    local dx = (id - 1) * 3000
+
+    local spots = {}
+    for _, s in ipairs(FarmSpots) do
+        table.insert(spots, { Rebirth = s.Rebirth, CFrame = s.CFrame + Vector3.new(dx, 0, 0) })
+    end
+
+    local stages = {}
+    for n, cf in pairs(Stages1) do
+        stages[n] = cf + Vector3.new(dx, 0, 0)
+    end
+
+    Worlds[id].FarmSpots = spots
+    Worlds[id].Stages = stages
+end
+
+-- ตรวจว่าอยู่โลกไหน (ใกล้จุดเกิดไหนสุด และต้องอยู่ห่างไม่เกิน 1500 studs)
+local function getCurrentWorld()
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    local bestId, bestDist = nil, 1500
+    for id, w in pairs(Worlds) do
+        local d = Vector3.new(hrp.Position.X - w.Spawn.X, 0, hrp.Position.Z - w.Spawn.Z).Magnitude
+        if d < bestDist then
+            bestId, bestDist = id, d
+        end
+    end
+    return bestId, bestId and Worlds[bestId] or nil
+end
+
 local function getFarmCFrame()
+    local _, world = getCurrentWorld()
+    local spots
+    if world then
+        spots = world.FarmSpots   -- โลก 2-5 ที่ยังไม่มีข้อมูล = nil → ไม่ขยับ
+    else
+        spots = FarmSpots         -- ตรวจโลกไม่เจอ ใช้ของโลก 1
+    end
+    if not spots then return nil end
+
     local rebirths = getRebirths()
-    for _, spot in ipairs(FarmSpots) do
+    for _, spot in ipairs(spots) do
         if rebirths >= spot.Rebirth then
             return spot.CFrame
         end
     end
 end
 
-local UserInputService = game:GetService("UserInputService")
-
--- ฟังก์ชันตรวจสอบว่าเป็นมือถือหรือแท็บเล็ตหรือไม่
-local function isMobile()
-    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
-
--- กำหนดขนาดและค่าต่างๆ แยกตามอุปกรณ์
-local windowSize, showUserInfoValue
-if isMobile() then
-    -- === สำหรับมือถือ ===
-    windowSize = UDim2.fromOffset(420, 350)
-    showUserInfoValue = false
-    print("Running on Mobile Mode")
-else
-    -- === สำหรับคอมพิวเตอร์ ===
-    windowSize = UDim2.fromOffset(868, 650)
-    showUserInfoValue = true
-    print("Running on PC Mode")
-end
-
 -- โหลด MacLib
 local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
+
+local viewport = workspace.CurrentCamera.ViewportSize
+local width  = math.clamp(viewport.X * 0.6, 420, 868)
+local height = math.clamp(viewport.Y * 0.75, 300, 650)
 
 -- สร้าง Window สำหรับ Poke Hub
 local Window = MacLib:Window({
     Title = "Poke Hub",
-    Subtitle = isMobile() and "Pokemon Mobile Edition" or "Pokemon PC Edition",
-    Size = windowSize,
+    Subtitle = "V1",
+    Size = UDim2.fromOffset(868, 650),
     DragStyle = 2,
     DisabledWindowControls = {},
-    ShowUserInfo = showUserInfoValue,
+    ShowUserInfo = true,
     Keybind = Enum.KeyCode.RightControl,
     AcrylicBlur = false,
 })
@@ -80,7 +134,7 @@ local Global_Setting = Window:GlobalSetting({
 
 Window:Notify({
     Title = "Poke Hub",
-    Description = isMobile() and "Pokemon Mobile UI Loaded!" or "Pokemon PC UI Loaded!",
+    Description = "PokeHub UI Loaded!",
     Lifetime = 5
 })
 
@@ -159,13 +213,32 @@ FarmLeftSection:Toggle({
         local mySession = getgenv().FarmSession
 
         task.spawn(function()
+            local lastWorldMove = 0
+
             while getgenv().Enabled and getgenv().FarmSession == mySession do
-                local targetCF = getFarmCFrame()
                 local char = player.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local alive = hrp and hum and hum.Health > 0
 
-                if targetCF and hrp and (hrp.Position - targetCF.Position).Magnitude > 10 then
-                    hrp.CFrame = targetCF
+                if alive then
+                    -- ย้ายไปโลกสูงสุดที่ปลดล็อก (ถ้าอยู่โลกต่ำกว่า)
+                    local curId = getCurrentWorld()
+                    local target = math.clamp(getgenv().KuySettings.MaxWorld or 1, 1, 5)
+
+                    if curId and curId < target and os.clock() - lastWorldMove > 5 then
+                        lastWorldMove = os.clock()
+                        Window:Notify({ Title = "Poke Hub", Description = "Moving to World " .. target, Lifetime = 4 })
+                        goToWorld(target)
+                        task.wait(1)
+                    else
+                        local targetCF = getFarmCFrame()
+                        if targetCF
+                            and os.clock() >= (getgenv().FarmPauseUntil or 0)
+                            and (hrp.Position - targetCF.Position).Magnitude > 10 then
+                            hrp.CFrame = targetCF
+                        end
+                    end
                 end
 
                 task.wait(0.3)
@@ -194,6 +267,48 @@ FarmLeftSection:Button({
         end
     end,
 })
+
+local function goToWorld(id)
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local w = Worlds[id]
+    if hrp and w then
+        hrp.CFrame = CFrame.new(w.Spawn)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+end
+
+local SelectedWorld = 1
+
+
+FarmLeftSection:Toggle({
+    Name = "Auto World (keep in target world)",
+    Default = false,
+    Callback = function(value)
+        print("Auto World:", value)
+
+        getgenv().WorldEnabled = value
+        getgenv().WorldSession = (getgenv().WorldSession or 0) + 1
+        if not value then return end
+        local mySession = getgenv().WorldSession
+
+        task.spawn(function()
+            while getgenv().WorldEnabled and getgenv().WorldSession == mySession do
+                local curId = getCurrentWorld()
+                local char = player.Character
+                local alive = char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").Health > 0
+
+                -- ไปเฉพาะตอนตรวจเจอว่าอยู่ผิดโลก และตัวละครยังไม่ตาย
+                if alive and curId and curId ~= SelectedWorld then
+                    goToWorld(SelectedWorld)
+                    task.wait(5) -- รอโหลดโลกใหม่ก่อนเช็กอีกรอบ
+                end
+
+                task.wait(2)
+            end
+        end)
+    end,
+}, "AutoWorldToggle")
 
 local AutoClickToggle = FarmRightSection:Toggle({
     Name = "Auto Cast",
@@ -408,8 +523,15 @@ AutoStageToggle = FarmLeftSection:Toggle({
         }
         local hopIndex = 1
         local lastHop = 0
+        local curId, curWorld = getCurrentWorld()
+        if curId and curId ~= 1 and not curWorld.Stages then
+            Window:Notify({ Title = "Poke Hub", Description = "No stage data for " .. curWorld.Name .. " yet", Lifetime = 5 })
+            getgenv().StageEnabled = false
+            pcall(function() AutoStageToggle:UpdateState(false) end)
+            return
+        end
 
-        local Stages = {
+        local Stages = (curWorld and curWorld.Stages) or {
             [1]  = CFrame.new(1.88, 2.98, -71.91),
             [2]  = CFrame.new(0.54, 2.98, -162.58),
             [3]  = CFrame.new(2.29, 2.98, -250.17),
@@ -592,7 +714,13 @@ AutoStageToggle = FarmLeftSection:Toggle({
             end
 
             if active() then
+        
                 claimPad(15, false)
+                local cur = getCurrentWorld()
+                if cur and cur < 5 then
+                    getgenv().KuySettings.MaxWorld = math.max(getgenv().KuySettings.MaxWorld or 1, cur + 1)
+                    notify("Unlocked World " .. getgenv().KuySettings.MaxWorld)
+                end
                 stopAll("All 15 stages completed")
             end
         end)
@@ -924,6 +1052,47 @@ MiscRightSection:Toggle({
 }, "AntiAfkToggle")
 
 -- ==========================================
+-- TAB: TELEPORT
+-- ==========================================
+local TeleportTab = MainTabGroup:Tab({
+    Name = "Teleport",
+    Image = "rbxassetid://6034509993"
+})
+
+local TeleportLeftSection = TeleportTab:Section({ Side = "Left" })
+local TeleportRightSection = TeleportTab:Section({ Side = "Right" })
+
+TeleportLeftSection:Slider({
+    Name = "Target World",
+    Default = 1,
+    Minimum = 1,
+    Maximum = 5,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        SelectedWorld = Value
+    end,
+}, "TargetWorldSlider")
+
+TeleportLeftSection:Button({
+    Name = "Go to World",
+    Callback = function()
+        goToWorld(SelectedWorld)
+        Window:Notify({ Title = "Poke Hub", Description = "Warped to world " .. tostring(SelectedWorld), Lifetime = 4 })
+    end,
+})
+
+for id = 1, 5 do
+    TeleportRightSection:Button({
+        Name = "World " .. id,
+        Callback = function()
+            goToWorld(id)
+            Window:Notify({ Title = "Poke Hub", Description = "Warped to world " .. id, Lifetime = 4 })
+        end,
+    })
+end
+
+-- ==========================================
 -- 4. TAB: SETTINGS
 -- ==========================================
 local SettingsTab = MainTabGroup:Tab({
@@ -1004,3 +1173,16 @@ SettingsLeftSection:Slider({
         getgenv().KuySettings.TrainDelay = Value / 100
     end,
 }, "TrainDelaySlider")
+
+SettingsLeftSection:Slider({
+    Name = "Max World Unlocked",
+    Default = getgenv().KuySettings.MaxWorld,
+    Minimum = 1,
+    Maximum = 5,
+    DisplayMethod = "Value",
+    Precision = 0,
+    Callback = function(Value)
+        getgenv().KuySettings.MaxWorld = Value
+    end,
+}, "MaxWorldSlider")
+
